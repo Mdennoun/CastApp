@@ -14,7 +14,6 @@ class AppNagatorViewController: UIViewController, WKNavigationDelegate {
     var webView: WKWebView!
     var link :String!
     class func newInstance(link: String) -> AppNagatorViewController {
-        /Users/mohameddennoun/Downloads/cast 2/cast
 
               let vc = AppNagatorViewController()
               vc.link = link
