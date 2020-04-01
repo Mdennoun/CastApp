@@ -1,0 +1,6 @@
+framework module Pods_BExtensionUploadSetupUI {
+  umbrella header "Pods-BExtensionUploadSetupUI-umbrella.h"
+
+  export *
+  module * { export * }
+}

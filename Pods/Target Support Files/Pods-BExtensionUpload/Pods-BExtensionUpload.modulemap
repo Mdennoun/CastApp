@@ -1,0 +1,6 @@
+framework module Pods_BExtensionUpload {
+  umbrella header "Pods-BExtensionUpload-umbrella.h"
+
+  export *
+  module * { export * }
+}
