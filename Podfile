@@ -22,6 +22,5 @@ target 'cast' do
   use_frameworks!
 
   # Pods for cast
-  pod 'YTLiveStreaming'
 
 end

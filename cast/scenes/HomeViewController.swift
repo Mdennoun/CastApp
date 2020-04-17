@@ -13,7 +13,7 @@ import ReplayKit
 import WebKit
 import AVKit
 import Photos
-import YTLiveStreaming
+
 
 class HomeViewController: UIViewController, RPPreviewViewControllerDelegate, WKNavigationDelegate {
 
@@ -24,7 +24,7 @@ class HomeViewController: UIViewController, RPPreviewViewControllerDelegate, WKN
     @IBOutlet weak var CameraBTN: UIButton!
     
 
-    let input = YTLiveStreaming()
+    
     let controller = RPBroadcastController()
     var cameraView1 = UIView(frame: CGRect(x: 0, y: 100, width: 100, height: 100))
     var cameraView : UIView?
@@ -83,6 +83,8 @@ class HomeViewController: UIViewController, RPPreviewViewControllerDelegate, WKN
 
         
     }
+    
+    
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
         if (keyPath == "captured") {
             let isCaptured = UIScreen.main.isCaptured
@@ -241,9 +243,6 @@ extension HomeViewController:AVCaptureFileOutputRecordingDelegate {
     
 
 
-
-
-
     func processStartFrontVideo(){
         
         let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
@@ -312,7 +311,6 @@ extension HomeViewController:AVCaptureFileOutputRecordingDelegate {
     }
     
     func processStopFrontVideo() {
-
         
         self.movieOutput.stopRecording()
         let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
@@ -321,9 +319,9 @@ extension HomeViewController:AVCaptureFileOutputRecordingDelegate {
         let fileManager = FileManager.default
         if fileManager.fileExists(atPath: filePath) {
                 UISaveVideoAtPathToSavedPhotosAlbum(filePath, self, nil, nil)
-                
-                    }
+        
         }
+    }
     
     func getpathScreenRec() -> Array<URL> {
         
@@ -338,90 +336,8 @@ extension HomeViewController:AVCaptureFileOutputRecordingDelegate {
   
  
  
-    func merge(arrayVideos:[AVAsset], completion:@escaping (_ exporter: AVAssetExportSession) -> ()) -> Void {
-
-      let mainComposition = AVMutableComposition()
-      let compositionVideoTrack = mainComposition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
-      compositionVideoTrack?.preferredTransform = CGAffineTransform(rotationAngle: .pi / 2)
-
-      let soundtrackTrack = mainComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
-
-        var insertTime = CMTime.zero
-
-      for videoAsset in arrayVideos {
-        try! compositionVideoTrack?.insertTimeRange(CMTimeRangeMake(start: CMTime.zero, duration: videoAsset.duration), of: videoAsset.tracks(withMediaType: .video)[0], at: insertTime)
-        //try! soundtrackTrack?.insertTimeRange(CMTimeRangeMake(start: CMTime.zero, duration: videoAsset.duration), of: videoAsset.tracks(withMediaType: .audio)[0], at: insertTime)
-
-        insertTime = CMTimeAdd(insertTime, videoAsset.duration)
-      }
-
-        let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
-        let documentsDirectory = paths[0] as String
-
-      let outputFileURL = URL(fileURLWithPath: documentsDirectory + "/Replays/merge.mp4")
-
-      let fileManager = FileManager()
-       // try? fileManager.removeItem(at: outputFileURL)
-
-      let exporter = AVAssetExportSession(asset: mainComposition, presetName: AVAssetExportPresetHighestQuality)
-
-      exporter?.outputURL = outputFileURL
-        print(outputFileURL)
-      exporter?.outputFileType = AVFileType.mp4
-      exporter?.shouldOptimizeForNetworkUse = true
-
-      exporter?.exportAsynchronously {
-        DispatchQueue.main.async {
-          completion(exporter!)
-        }
-      }
-    }
-    func mergev(arrayVideos:[AVAsset], completion:@escaping (URL?, Error?) -> ()) {
-
-      let mainComposition = AVMutableComposition()
-      let compositionVideoTrack = mainComposition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid)
-      compositionVideoTrack?.preferredTransform = CGAffineTransform(rotationAngle: .pi / 2)
-
-      let soundtrackTrack = mainComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
-
-        var insertTime = CMTime.zero
-
-      for videoAsset in arrayVideos {
-        try! compositionVideoTrack?.insertTimeRange(CMTimeRangeMake(start: .zero, duration: videoAsset.duration), of: videoAsset.tracks(withMediaType: .video)[0], at: insertTime)
-        //try! soundtrackTrack?.insertTimeRange(CMTimeRangeMake(start: .zero, duration: videoAsset.duration), of: videoAsset.tracks(withMediaType: .audio)[0], at: insertTime)
-
-        insertTime = CMTimeAdd(insertTime, videoAsset.duration)
-      }
-
-      let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
-        let documentsDirectory = paths[0] as String
-
-      let outputFileURL = URL(fileURLWithPath: documentsDirectory + "merge.mp4")
-        print("file")
-        print(outputFileURL)
-      let fileManager = FileManager()
-      try? fileManager.removeItem(at: outputFileURL)
-
-      let exporter = AVAssetExportSession(asset: mainComposition, presetName: AVAssetExportPresetHighestQuality)
-
-      exporter?.outputURL = outputFileURL
-      exporter?.outputFileType = AVFileType.mp4
-      exporter?.shouldOptimizeForNetworkUse = true
-
-      exporter?.exportAsynchronously {
-        if let url = exporter?.outputURL{
-            print(url)
-
-            UISaveVideoAtPathToSavedPhotosAlbum(url.absoluteString, self, nil, nil)
-            completion(url, nil)
-            
-        }
-        if let error = exporter?.error {
-            completion(nil, error)
-        }
-      }
-    }
-    
+  
+   
     func getUrlFromPHAsset(asset: PHAsset, callBack: @escaping (_ url: URL?) -> Void)
     {
         asset.requestContentEditingInput(with: PHContentEditingInputRequestOptions(), completionHandler: { (contentEditingInput, dictInfo) in
@@ -434,38 +350,8 @@ extension HomeViewController:AVCaptureFileOutputRecordingDelegate {
         })
     }
     
-    func mergeVideosFilesWithUrl(savedVideoUrl: URL, newVideoUrl: URL, audioUrl:URL)
-    {
-       
-       
-
-    }
-  func mergeVideo() {
-            let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
-            let documentsDirectory = paths[0] as String
-    
-            let fileURLs = getpathScreenRec()
-        
-      /*  DPVideoMerger().mergeVideos(withFileURLs: fileURLs , completion: {(_ mergedVideoFile: URL?, _ error: Error?) -> Void in
-            print(mergedVideoFile)
-                if error != nil {
-                    let errorMessage = "Could not merge videos: \(error?.localizedDescription ?? "error")"
-                    let alert = UIAlertController(title: "Error", message: errorMessage, preferredStyle: .alert)
-                    self.present(alert, animated: true) {() -> Void in }
-                    return
-                }
-                let objAVPlayerVC = AVPlayerViewController()
-                objAVPlayerVC.player = AVPlayer(url: mergedVideoFile!)
-                self.present(objAVPlayerVC, animated: true, completion: {() -> Void in
-                    objAVPlayerVC.player?.play()
-                })
-            })*/
-        
-        
-    }
-       
-    
 }
+
 // AVCaptureVideoDataOutputSampleBufferDelegate protocol and related methods
 extension HomeViewController:  AVCaptureVideoDataOutputSampleBufferDelegate{
 
@@ -488,10 +374,8 @@ extension HomeViewController:  AVCaptureVideoDataOutputSampleBufferDelegate{
     }
 
     
-
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         // do stuff here
     }
-
 
 }
