@@ -102,25 +102,41 @@ class HomeViewController: UIViewController, RPPreviewViewControllerDelegate, WKN
                     let outputFileURL = URL(fileURLWithPath: documentsDirectory + "/Replays/output.mp4")
                       print("file")
                       print(outputFileURL)
-                    self.latestVideoAssetsFetched = self.fetchLatestVideos(forCount: 1)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: {
                     
+                    
+                    self.latestVideoAssetsFetched = self.fetchLatestVideos(forCount: 1)
+                        
+                       
                 
                     self.getUrlFromPHAsset(asset: self.latestVideoAssetsFetched!.firstObject!) { (urlvideo1) in
-                            print(urlvideo1?.absoluteString)
-                            self.mertgevid(savedVideoUrl: urlvideo1!, newVideoUrl: outputFileURL)
-                            
+                            print(urlvideo1!.relativePath)
+                            let asset = AVURLAsset(url: urlvideo1!, options: nil)
+                        
+
+                        let pathSoundtrack = URL(fileURLWithPath: documentsDirectory + "/Replays/soundOutput.m4a")
+                        let fileManager = FileManager.default
+                        do {
+                            try fileManager.removeItem(at: pathSoundtrack)
+                          } catch {
+                              print("file not exist")
+                          }
+                        
+                        asset.writeAudioTrackToURL(URL(fileURLWithPath: pathSoundtrack.relativePath)) { (success, error) -> () in
+                            if !success {
+                                print(error)
+                            } else {
+                                self.mertgevid(savedVideoUrl: urlvideo1!, newVideoUrl: outputFileURL, soundtrackUrl: pathSoundtrack)
+                            }
+                                                   
                         }
-                        
-                        
-                    
+                        }
+                    })
                 }
-                
-                    
-                
             }
         }
-        
     }
+    
  func fetchLatestVideos(forCount count: Int?) -> PHFetchResult<PHAsset> {
 
      // Create fetch options.
@@ -138,7 +154,7 @@ class HomeViewController: UIViewController, RPPreviewViewControllerDelegate, WKN
 
  }
     
-    func mertgevid (savedVideoUrl: URL, newVideoUrl: URL) {
+    func mertgevid (savedVideoUrl: URL, newVideoUrl: URL, soundtrackUrl: URL) {
         let savePathUrl : NSURL = NSURL(fileURLWithPath: NSHomeDirectory() + "/Documents/camRecordedVideo.mp4")
         do { // delete old video
             try FileManager.default.removeItem(at: savePathUrl as URL)
@@ -146,22 +162,33 @@ class HomeViewController: UIViewController, RPPreviewViewControllerDelegate, WKN
 
         var mutableVideoComposition : AVMutableVideoComposition = AVMutableVideoComposition()
         var mixComposition : AVMutableComposition = AVMutableComposition()
+        var mutableCompositionAudioTrack : [AVMutableCompositionTrack] = []
+        
 
         let aNewVideoAsset : AVAsset = AVAsset(url: newVideoUrl)
         let asavedVideoAsset : AVAsset = AVAsset(url: savedVideoUrl)
+        let soundtrackVideoAsset : AVAsset = AVAsset(url: soundtrackUrl)
+        
+        
+
 
         let aNewVideoTrack : AVAssetTrack = aNewVideoAsset.tracks(withMediaType: AVMediaType.video)[0]
         let aSavedVideoTrack : AVAssetTrack = asavedVideoAsset.tracks(withMediaType: AVMediaType.video)[0]
+        let aAudioAssetTrack : AVAssetTrack = soundtrackVideoAsset.tracks(withMediaType: AVMediaType.audio)[0]
 
         let mutableCompositionNewVideoTrack : AVMutableCompositionTrack = mixComposition.addMutableTrack(withMediaType: AVMediaType.video, preferredTrackID: kCMPersistentTrackID_Invalid)!
         do{
             try mutableCompositionNewVideoTrack.insertTimeRange(CMTimeRangeMake(start: CMTime.zero, duration: aNewVideoAsset.duration), of: aNewVideoTrack, at: CMTime.zero)
-        }catch {  print("Mutable Error") }
+        }catch {  print("Front cam Mutable Error") }
 
         let mutableCompositionSavedVideoTrack : AVMutableCompositionTrack = mixComposition.addMutableTrack(withMediaType: AVMediaType.video, preferredTrackID: kCMPersistentTrackID_Invalid)!
         do{
             try mutableCompositionSavedVideoTrack.insertTimeRange(CMTimeRangeMake(start: CMTime.zero, duration: asavedVideoAsset.duration), of: aSavedVideoTrack , at: CMTime.zero)
-        }catch{ print("Mutable Error") }
+        }catch{ print("Screenrecord Mutable Error") }
+        mutableCompositionAudioTrack.append( mixComposition.addMutableTrack(withMediaType: AVMediaType.audio, preferredTrackID: kCMPersistentTrackID_Invalid)!)
+        do{
+            try mutableCompositionAudioTrack[0].insertTimeRange(CMTimeRangeMake(start: CMTime.zero, duration: asavedVideoAsset.duration), of: aAudioAssetTrack , at: CMTime.zero)
+        }catch{ print("Sound Mutable Error") }
 
         let mainInstruction = AVMutableVideoCompositionInstruction()
         mainInstruction.timeRange = CMTimeRangeMake(start: CMTime.zero, duration: CMTimeMaximum(asavedVideoAsset.duration, asavedVideoAsset.duration) )
@@ -200,6 +227,7 @@ class HomeViewController: UIViewController, RPPreviewViewControllerDelegate, WKN
 
                     UISaveVideoAtPathToSavedPhotosAlbum(assetExport.outputURL!.relativePath, self, nil, nil)
                     let player = AVPlayer(url: assetExport.outputURL! as URL)
+                    //let player = AVPlayer(url: soundtrackUrl as URL)
                     let playerViewController = AVPlayerViewController()
                     playerViewController.player = player
                     self.present(playerViewController, animated: true) {
@@ -301,7 +329,7 @@ extension HomeViewController:AVCaptureFileOutputRecordingDelegate {
                    }
                    catch{
 
-                       print("Error")
+                    print(error.localizedDescription)
                    }
 
                }
@@ -378,4 +406,49 @@ extension HomeViewController:  AVCaptureVideoDataOutputSampleBufferDelegate{
         // do stuff here
     }
 
+}
+extension AVAsset {
+
+    func writeAudioTrackToURL(_ url: URL, completion: @escaping (Bool, Error?) -> ()) {
+        do {
+            let audioAsset = try self.audioAsset()
+            audioAsset.writeToURL(url, completion: completion)
+        } catch (let error as NSError){
+            completion(false, error)
+        }
+    }
+
+    func writeToURL(_ url: URL, completion: @escaping (Bool, Error?) -> ()) {
+
+        guard let exportSession = AVAssetExportSession(asset: self, presetName: AVAssetExportPresetAppleM4A) else {
+            completion(false, nil)
+            return
+        }
+
+        exportSession.outputFileType = .m4a
+        exportSession.outputURL      = url
+
+        exportSession.exportAsynchronously {
+            switch exportSession.status {
+            case .completed:
+                completion(true, nil)
+            case .unknown, .waiting, .exporting, .failed, .cancelled:
+                completion(false, nil)
+            }
+        }
+    }
+
+    func audioAsset() throws -> AVAsset {
+
+        let composition = AVMutableComposition()
+        let audioTracks = tracks(withMediaType: .audio)
+
+        for track in audioTracks {
+
+            let compositionTrack = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid)
+            try compositionTrack?.insertTimeRange(track.timeRange, of: track, at: track.timeRange.start)
+            compositionTrack?.preferredTransform = track.preferredTransform
+        }
+        return composition
+    }
 }
